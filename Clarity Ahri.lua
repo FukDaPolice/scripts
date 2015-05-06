@@ -25,7 +25,7 @@ print("<font color='#FF9900'>[Clarity Ahri] Checking for any update...</font>")
 
 
 local SELF = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
-local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri"
+local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri.lua"
 local UPDATE_TMP_FILE = LIB_PATH .."tempupdater.txt" .. math.random(100000)
 
 function Update()
