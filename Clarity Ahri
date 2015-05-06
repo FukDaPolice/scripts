@@ -19,10 +19,13 @@ if myHero.charName ~= 'Ahri' then return end
 --needs auto zhonya
 
 --[[		Auto Update		]]
-local version = "1.1"
+local version = "1.2"
+print("<font color='#FF9900'>[Clarity Ahri] Starting Clarity AHri with version : ".. version .."</font>")
+print("<font color='#FF9900'>[Clarity Ahri] Checking for any update...</font>")
+
 
 local SELF = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
-local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri.lua"
+local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri"
 local UPDATE_TMP_FILE = LIB_PATH .."tempupdater.txt" .. math.random(100000)
 
 function Update()
