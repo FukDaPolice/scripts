@@ -20,35 +20,48 @@ if myHero.charName ~= 'Ahri' then return end
 
 --[[		Auto Update		]]
 local version = "1.1"
-local author = "FukDaPolice"
-local SCRIPT_NAME = "Clarity Ahri"
-local AUTOUPDATE = true
-local UPDATE_HOST = "raw.github.com"
-local UPDATE_PATH = "/FukDaPolice/scripts/master/Clarity%20Ahri".."?rand="..math.random(1,10000)
-local UPDATE_FILE_PATH = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
-local UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
 
-function AutoupdaterMsg(msg) print("<font color=\"#FF0000\"><b>Clarity Ahri:</b></font> <font color=\"#FFFFFF\">"..msg..".</font>") end
-if AUTOUPDATE then
-	local ServerData = GetWebResult(UPDATE_HOST, "//FukDaPolice/scripts/master/Clarity%20Ahri.version")
-	
-	
-	
-	if ServerData then
-		ServerVersion = type(tonumber(ServerData)) == "number" and tonumber(ServerData) or nil
-		if ServerVersion then
-			if tonumber(version) < ServerVersion then
-				AutoupdaterMsg("New version available "..ServerVersion)
-				AutoupdaterMsg("Updating, please don't press F9")
-				DelayAction(function() DownloadFile(UPDATE_URL, UPDATE_FILE_PATH, function () AutoupdaterMsg("Successfully updated. ("..version.." => "..ServerVersion.."), press F9 twice to load the updated version.") end) end, 3)
-			else
-				AutoupdaterMsg("You have got the latest version ("..ServerVersion..")")
-			end
-		end
-	else
-		AutoupdaterMsg("Error downloading version info")
-	end
+local SELF = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
+local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri.lua"
+local UPDATE_TMP_FILE = LIB_PATH .."tempupdater.txt" .. math.random(100000)
+
+function Update()
+  local url = URL .. "?random=" .. math.random(100000)
+  DownloadFile(url, UPDATE_TMP_FILE, UpdateCallback)
 end
+
+function UpdateCallback()
+  file = io.open(UPDATE_TMP_FILE, "rb")
+  if file ~= nil then
+    content = file:read("*all")
+    file:close()
+    os.remove(UPDATE_TMP_FILE)
+    if content then
+      tmp, sstart = string.find(content, "local version = \"")
+      if sstart then
+        send, tmp = string.find(content, "\"", sstart+1)
+      end
+      if send then
+        Version = tonumber(string.sub(content, sstart+1, send-1))
+      end
+      if (Version ~= nil)  and  (Version > tonumber(version)) then
+        file = io.open(SELF, "w")
+        if file then
+          file:write(content)
+          file:flush()
+          file:close()
+          print("<font color='#00FF00'>[Ahri] Clarity Ahri updated to version: "..Version) 
+          print("<font color='#FF0000'>[Ahri] Please press F9 twice to reload.</font>")
+        else
+          print("<font color='#FF0000'>[Clarity Ahri] Error updating the script, some features will not work.</font>") 
+        end
+      else         
+        print("<font color='#FF9900'>[Clarity Ahri] is up to date.</font>")
+      end
+    end
+  end
+end
+
 ------------------------------------------------------------------------------------------------------------------------------------------
 
 
