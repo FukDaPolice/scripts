@@ -20,7 +20,7 @@ if myHero.charName ~= 'Ahri' then return end
 
 --[[		Auto Update		]]
 
-local Version = "1.1"
+local Version = "1.3"
 local AutoUpdate = true
 
 function ScriptMsg(msg)
@@ -91,7 +91,29 @@ local myTarget = nil
 local Killable = false
 local LastAlert = 0
 
-
+local checkFountain = false
+local nextUpdate = 0
+local useTimer = 0
+local potions = {				
+		healthPotion = {
+			slot = nil,
+			nextUse = 0,
+			isBuffed = false,
+				
+			itemID	= 2003,		
+			--compareValue = function() return ((player.health / player.maxHealth)*100) end,
+			buff = "RegenerationPotion",
+		},
+		manaPotion = {
+			slot = nil,
+			nextUse = 0,
+			isBuffed = false,
+			
+			itemID	= 2004,		
+			--compareValue = function() return ((player.mana / player.maxMana)*100) end,
+			buff = "FlaskOfCrystalWater",
+		},
+	}
 ---------------------DPred---------------------------------------------------
 
 -----------------------------------------------------------------------------------------------------------------------------
@@ -134,7 +156,7 @@ end
 
 function OnLoad()
      
-	  
+	checkFountain = (GetGame().map.index ~= 7 and GetGame().map.index ~= 12) -- no heal in Proving Ground / ARAM  
 	PrintChat("<font color=\"#00FF00\">Ahri by Team Clarity.</font>")
 	ItemNames				= {
 		[3303]				= "ArchAngelsDummySpell",
@@ -218,7 +240,7 @@ function OnLoad()
 	
 	___GetInventorySlotItem	= rawget(_G, "GetInventorySlotItem")
 	_G.GetInventorySlotItem	= GetSlotItem
-	
+    myHero = GetMyHero()
 	checkDistance = 3000 * 3000
 	IgniteCheck()
 	FLoadLib()
@@ -241,8 +263,37 @@ function OnTick()
 	if isSX then
 		SxOrb:ForceTarget(target)
 	end
-	  
-   
+	if not TargetHaveBuff( "RegenerationPotion" , myHero) then
+	
+		if HazMenu.More.autopot then
+			
+			if (myHero.health/myHero.maxHealth < HazMenu.More.autoRed/100) then
+			
+				
+				--CastItem(2003)
+				CastSpell(ITEM_1)
+					
+			
+			end
+			
+		end
+	
+	end
+    if not TargetHaveBuff( "FlaskOfCrystalWater" , myHero) then
+		
+		if HazMenu.More.autopot then
+			
+			if (myHero.mana/myHero.maxMana < HazMenu.More.autoBlue/100) then
+				
+				--CastItem(2003)
+				CastSpell(ITEM_2)
+			
+			end
+				
+		end
+			
+	end
+    
 end
 
 function OnDraw()
@@ -296,6 +347,7 @@ function Checks()
 	calcDmg()
 	LFCfunc()
 	SpellExpired()
+	
 	
 	if ValidTarget(target) then
 		if HazMenu.Misc.KS then KS(target) end
@@ -364,6 +416,9 @@ function FMenu()
 		if divinePredLoaded then
 		HazMenu.More:addParam("Pred", "Use DPred", SCRIPT_PARAM_ONOFF, true)
 	    end
+	    HazMenu.More:addParam("autopot", "Use Aoto pots", SCRIPT_PARAM_ONOFF, true)
+		HazMenu.More:addParam("autoRed", "Auto pot RED % HP", SCRIPT_PARAM_SLICE, 20, 0, 100 , 0)
+		HazMenu.More:addParam("autoBlue", "Auto pot BLUE % Mn", SCRIPT_PARAM_SLICE, 20, 0, 100 , 0)
 	
     HazMenu:addSubMenu("Farm", "Farm")
 	    HazMenu.Farm:addParam("farmQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
@@ -563,11 +618,7 @@ end
 
 function Combo()
 	if ValidTarget(target) then
-        	if W.IsReady() and HazMenu.Combo.comboW then
-			    if GetDistance(myHero, target) <=  550 then
-			       CastSpell(_W)
-			    end
-			end
+        	
 			
 			    if R.IsReady() and HazMenu.Combo.comboR then
 			        if HazMenu.Combo.comboRm then
@@ -604,7 +655,11 @@ function Combo()
 				end	
 			--elseif not HazMenu.Combo.stunQ then
 			    end 
-	        
+	        if W.IsReady() and HazMenu.Combo.comboW then
+			    if GetDistance(myHero, target) <=  550 then
+			       CastSpell(_W)
+			    end
+			end
 	end	
 end
 
@@ -705,7 +760,7 @@ end
 
 function divineE()
 local target = DPTarget(target)
-			        local AhriE = LineSS(E.speed, E.range, E.width, E.delay, 0)
+			        local AhriE = LineSS(E.speed, E.range, E.width, (E.delay*1000), 0)
 			        local State, Position, perc = DP:predict(target, AhriE)
 			        if State == SkillShot.STATUS.SUCCESS_HIT then 
 				
@@ -717,7 +772,7 @@ end
 
 function divineQ()
 local target = DPTarget(target)
-			        local AhriQ = LineSS(Q.speed, Q.range, Q.width, Q.delay, math.huge)
+			        local AhriQ = LineSS(Q.speed, Q.range, Q.width, (Q.delay*1000), math.huge)
 			        local State, Position, perc = DP:predict(target, AhriQ)
 			        if State == SkillShot.STATUS.SUCCESS_HIT then 
 				
@@ -963,3 +1018,4 @@ function moveto()
     end
 end
 
+-----------------------------autopotions-----------------------------------------------------
