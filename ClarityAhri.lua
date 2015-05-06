@@ -6,7 +6,7 @@
 if myHero.charName ~= 'Ahri' then return end
 
 
-
+--AHRI with auto updater
 --draws Q+W enemy HPbar
 --lag free circles
 --draws and alert u if someone is gankable
@@ -19,50 +19,116 @@ if myHero.charName ~= 'Ahri' then return end
 --needs auto zhonya
 
 --[[		Auto Update		]]
-local version = "1.2"
-print("<font color='#FF9900'>[Clarity Ahri] Starting Clarity AHri with version : ".. version .."</font>")
-print("<font color='#FF9900'>[Clarity Ahri] Checking for any update...</font>")
-
-
-local SELF = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
-local URL = "https://raw.githubusercontent.com/FukDaPolice/scripts/master/Clarity%20Ahri.lua"
-local UPDATE_TMP_FILE = LIB_PATH .."tempupdater.txt" .. math.random(100000)
-
-function Update()
-  local url = URL .. "?random=" .. math.random(100000)
-  DownloadFile(url, UPDATE_TMP_FILE, UpdateCallback)
+function CheckUpdate()
+        local scriptName = "ClarityAhri"
+        local version = 1.1
+        local ToUpdate = {}
+        ToUpdate.Version = version
+        ToUpdate.Host = "raw.githubusercontent.com"
+        ToUpdate.VersionPath = "/FukDaPolice/scripts/blob/master/ClarityAhri"..scriptName..".version"
+        ToUpdate.ScriptPath = "/FukDaPolice/scripts/blob/master/ClarityAhri"..scriptName..".lua"
+        ScriptUpdate(ToUpdate.Version, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath)
+end
+class "ScriptUpdate"
+function ScriptUpdate:__init(LocalVersion, Host, VersionPath, ScriptPath)
+    self.LocalVersion = LocalVersion
+    self.Host = Host
+    self.VersionPath = '/BoL/TCPUpdater/GetScript2.php?script='..self:Base64Encode(self.Host..VersionPath)..'&rand='..math.random(99999999)
+    self.ScriptPath = '/BoL/TCPUpdater/GetScript2.php?script='..self:Base64Encode(self.Host..ScriptPath)..'&rand='..math.random(99999999)
+    self.SavePath = SCRIPT_PATH..GetCurrentEnv().FILE_NAME
+    self.CallbackUpdate = function(NewVersion, OldVersion) print("Updated to "..NewVersion..". Please Reload with 2x F9.") end
+    self.CallbackNoUpdate = function(OldVersion) print("No Updates Found") end
+    self.CallbackNewVersion = function(NewVersion) print("New Version found ("..NewVersion.."). Please wait..") end
+    self.LuaSocket = require("socket")
+    self.Socket = self.LuaSocket.connect('sx-bol.eu', 80)
+    self.Socket:send("GET "..self.VersionPath.." HTTP/1.0\r\nHost: sx-bol.eu\r\n\r\n")
+    self.Socket:settimeout(0, 'b')
+    self.Socket:settimeout(99999999, 't')
+    self.LastPrint = ""
+    self.File = ""
+    AddTickCallback(function() self:GetOnlineVersion() end)
 end
 
-function UpdateCallback()
-  file = io.open(UPDATE_TMP_FILE, "rb")
-  if file ~= nil then
-    content = file:read("*all")
-    file:close()
-    os.remove(UPDATE_TMP_FILE)
-    if content then
-      tmp, sstart = string.find(content, "local version = \"")
-      if sstart then
-        send, tmp = string.find(content, "\"", sstart+1)
-      end
-      if send then
-        Version = tonumber(string.sub(content, sstart+1, send-1))
-      end
-      if (Version ~= nil)  and  (Version > tonumber(version)) then
-        file = io.open(SELF, "w")
-        if file then
-          file:write(content)
-          file:flush()
-          file:close()
-          print("<font color='#00FF00'>[Ahri] Clarity Ahri updated to version: "..Version) 
-          print("<font color='#FF0000'>[Ahri] Please press F9 twice to reload.</font>")
-        else
-          print("<font color='#FF0000'>[Clarity Ahri] Error updating the script, some features will not work.</font>") 
+function ScriptUpdate:Base64Encode(data)
+    local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    return ((data:gsub('.', function(x)
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b:sub(c+1,c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+
+function ScriptUpdate:GetOnlineVersion()
+    if self.Status == 'closed' then return end
+    self.Receive, self.Status, self.Snipped = self.Socket:receive(1024)
+
+    if self.Receive then
+        if self.LastPrint ~= self.Receive then
+            self.LastPrint = self.Receive
+            self.File = self.File .. self.Receive
         end
-      else         
-        print("<font color='#FF9900'>[Clarity Ahri] is up to date.</font>")
-      end
     end
-  end
+
+    if self.Snipped ~= "" and self.Snipped then
+        self.File = self.File .. self.Snipped
+    end
+    if self.Status == 'closed' then
+        local HeaderEnd, ContentStart = self.File:find('\r\n\r\n')
+        if HeaderEnd and ContentStart then
+            self.OnlineVersion = tonumber(self.File:sub(ContentStart + 1))
+            if self.OnlineVersion > self.LocalVersion then
+                if self.CallbackNewVersion and type(self.CallbackNewVersion) == 'function' then
+                    self.CallbackNewVersion(self.OnlineVersion,self.LocalVersion)
+                end
+                self.DownloadSocket = self.LuaSocket.connect('sx-bol.eu', 80)
+                self.DownloadSocket:send("GET "..self.ScriptPath.." HTTP/1.0\r\nHost: sx-bol.eu\r\n\r\n")
+                self.DownloadSocket:settimeout(0, 'b')
+                self.DownloadSocket:settimeout(99999999, 't')
+                self.LastPrint = ""
+                self.File = ""
+                AddTickCallback(function() self:DownloadUpdate() end)
+            else
+                if self.CallbackNoUpdate and type(self.CallbackNoUpdate) == 'function' then
+                    self.CallbackNoUpdate(self.LocalVersion)
+                end
+            end
+        else
+            print('Error: Could not get end of Header')
+        end
+    end
+end
+
+function ScriptUpdate:DownloadUpdate()
+    if self.DownloadStatus == 'closed' then return end
+    self.DownloadReceive, self.DownloadStatus, self.DownloadSnipped = self.DownloadSocket:receive(1024)
+
+    if self.DownloadReceive then
+        if self.LastPrint ~= self.DownloadReceive then
+            self.LastPrint = self.DownloadReceive
+            self.File = self.File .. self.DownloadReceive
+        end
+    end
+
+    if self.DownloadSnipped ~= "" and self.DownloadSnipped then
+        self.File = self.File .. self.DownloadSnipped
+    end
+
+    if self.DownloadStatus == 'closed' then
+        local HeaderEnd, ContentStart = self.File:find('\r\n\r\n')
+        if HeaderEnd and ContentStart then
+            local ScriptFileOpen = io.open(self.SavePath, "w+")
+            ScriptFileOpen:write(self.File:sub(ContentStart + 1))
+            ScriptFileOpen:close()
+            if self.CallbackUpdate and type(self.CallbackUpdate) == 'function' then
+                self.CallbackUpdate(self.OnlineVersion,self.LocalVersion)
+            end
+        end
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------------------------------------
